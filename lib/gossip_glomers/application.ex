@@ -8,7 +8,7 @@ defmodule GossipGlomers.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      GossipGlomers.BroadcastA
+      GossipGlomers.Broadcast
     ]
 
     opts = [strategy: :one_for_one, name: GossipGlomers.Supervisor]

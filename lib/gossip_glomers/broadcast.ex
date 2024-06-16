@@ -1,4 +1,4 @@
-defmodule GossipGlomers.BroadcastA do
+defmodule GossipGlomers.Broadcast do
   use GossipGlomers.Node
 
   def init_state do
