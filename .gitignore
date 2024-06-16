@@ -24,3 +24,6 @@ gossip_glomers-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+*.log
+/store/
