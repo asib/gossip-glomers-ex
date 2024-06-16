@@ -25,5 +25,10 @@ gossip_glomers-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
+# application logs
 *.log
+
+# jepsen output
 /store/
+
+.DS_Store
