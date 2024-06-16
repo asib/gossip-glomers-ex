@@ -2,27 +2,41 @@ defmodule GossipGlomers.BroadcastA do
   use GossipGlomers.Node
 
   def init_state do
-    %{messages: [], node_neighbours: %{}}
+    %{messages: %{}, node_neighbours: %{}}
   end
 
   @impl true
   def handle_info(
-        {"broadcast", msg, %{"message" => id} = body},
-        %{node_id: node_id, node_neighbours: node_neighbours} = state
+        {"broadcast", %{"src" => src} = msg, %{"message" => message} = body},
+        %{node_id: node_id, node_neighbours: node_neighbours, messages: messages} = state
       ) do
-    neighbours =
-      case node_neighbours do
-        %{^node_id => neighbours} -> neighbours
-        _ -> []
-      end
+    seen_from_this_source =
+      messages
+      |> Map.get(message, [])
+
+    neighbours_to_alert =
+      node_neighbours
+      |> Map.get(node_id, [])
+      |> Enum.reject(&Enum.member?(seen_from_this_source, &1))
 
     state =
-      Enum.reduce(neighbours, state, fn neighbour, state ->
+      Enum.reduce(neighbours_to_alert, state, fn neighbour, state ->
         send_msg(neighbour, body, state)
       end)
       |> then(&reply(msg, %{"type" => "broadcast_ok"}, &1))
 
-    {:noreply, %{state | messages: [id | state.messages]}}
+    {:noreply,
+     %{
+       state
+       | messages:
+           Map.update(messages, message, [src], fn sources ->
+             if(
+               Enum.member?(sources, src),
+               do: sources,
+               else: [src | sources]
+             )
+           end)
+     }}
   end
 
   @impl true
@@ -30,7 +44,7 @@ defmodule GossipGlomers.BroadcastA do
     state =
       reply(
         msg,
-        %{"type" => "read_ok", "messages" => messages},
+        %{"type" => "read_ok", "messages" => Map.keys(messages)},
         state
       )
 
@@ -42,5 +56,12 @@ defmodule GossipGlomers.BroadcastA do
     state = reply(msg, %{"type" => "topology_ok"}, state)
 
     {:noreply, %{state | node_neighbours: node_neighbours}}
+  end
+
+  @impl true
+  def handle_info(msg, state) do
+    Logger.info("unexpected: #{inspect(msg)}")
+
+    {:noreply, state}
   end
 end
